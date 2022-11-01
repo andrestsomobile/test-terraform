@@ -5,8 +5,8 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/gruntwork-io/terratest/modules/terraform"
-	test_structure "github.com/gruntwork-io/terratest/modules/test-structure"
 	"github.com/stretchr/testify/assert"
+	test_structure "github.com/gruntwork-io/terratest/modules/test-structure"
 )
 
 // An example of how to test the Terraform module in examples/terraform-aws-example using Terratest.
@@ -15,17 +15,20 @@ func TestTerraformAwsExample(t *testing.T) {
 
 	// Make a copy of the terraform module to a temporary directory. This allows running multiple tests in parallel
 	// against the same terraform module.
-	exampleFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "./")
+	test_structure.CopyTerraformFolderToTemp(t, "../../", "test-terraform")
+
+	// Give this EC2 Instance a unique ID for a name tag so we can distinguish it from any other EC2 Instance running
+	// in your AWS account
+	expectedName := "My first EC2 using Terraform"
 
 	// Pick a random AWS region to test in. This helps ensure your code works in all regions.
 	awsRegion := aws.GetRandomStableRegion(t, nil, nil)
-
-	// website::tag::1::Configure Terraform setting path to Terraform code, EC2 instance name, and AWS Region. We also
-	// configure the options with default retryable errors to handle the most common retryable errors encountered in
+	
 	// terraform testing.
+	//planFilePath := filepath.Join(exampleFolder, "plan.out")
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
 		// The path to where our Terraform code is located
-		TerraformDir: exampleFolder,
+		TerraformDir: "../",
 
 		// Variables to pass to our Terraform code using -var options
 		Vars: map[string]interface{}{
@@ -47,16 +50,16 @@ func TestTerraformAwsExample(t *testing.T) {
 		EnvVars: map[string]string{
 			"AWS_DEFAULT_REGION": awsRegion,
 		},
+
+		// Configure a plan file path so we can introspect the plan and make assertions about it.
+		PlanFilePath: "../plan.out",
 	})
 
-	// website::tag::4::At the end of the test, run `terraform destroy` to clean up any resources that were created
-	defer terraform.Destroy(t, terraformOptions)
+	plan := terraform.InitAndPlanAndShowWithStruct(t, terraformOptions)
 
-	// website::tag::2::Run `terraform init` and `terraform apply` and fail the test if there are any errors
-	terraform.InitAndApply(t, terraformOptions)
-
-	// Run `terraform output` to get the value of an output variable
-	endpoint := terraform.Output(t, terraformOptions, "db_instance_endpoint")
-
-	assert.NotNil(t, endpoint)
+	//Get instance name
+	terraform.RequirePlannedValuesMapKeyExists(t, plan, "aws_instance.example")
+	ec2Resource := plan.ResourcePlannedValuesMap["aws_instance.example"]
+	ec2Tags := ec2Resource.AttributeValues["tags"].(map[string]interface{})
+	assert.Equal(t, map[string]interface{}{"Name": expectedName}, ec2Tags)
 }
