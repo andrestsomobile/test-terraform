@@ -13,7 +13,7 @@ func TestTerraformAwsExample(t *testing.T) {
 	t.Parallel()
 	// Give this EC2 Instance a unique ID for a name tag so we can distinguish it from any other EC2 Instance running
 	// in your AWS account
-	expectedName := "My first EC2 using Terraform"
+	expectedName := "mysql"
 
 	// Pick a random AWS region to test in. This helps ensure your code works in all regions.
 	awsRegion := aws.GetRandomStableRegion(t, nil, nil)
@@ -52,8 +52,8 @@ func TestTerraformAwsExample(t *testing.T) {
 	plan := terraform.InitAndPlanAndShowWithStruct(t, terraformOptions)
 
 	//Get instance name
-	terraform.RequirePlannedValuesMapKeyExists(t, plan, "aws_instance.example")
-	ec2Resource := plan.ResourcePlannedValuesMap["aws_instance.example"]
-	ec2Tags := ec2Resource.AttributeValues["tags"].(map[string]interface{})
-	assert.Equal(t, map[string]interface{}{"Name": expectedName}, ec2Tags)
+	terraform.RequirePlannedValuesMapKeyExists(t, plan, "aws_db_instance.default")
+	ec2Resource := plan.ResourcePlannedValuesMap["aws_db_instance.default"]
+	ec2Tags := ec2Resource.Name["engine"].(string)
+	assert.Equal(t, expectedName, ec2Tags)
 }
