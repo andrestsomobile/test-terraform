@@ -54,6 +54,6 @@ func TestTerraformAwsExample(t *testing.T) {
 	//Get instance name
 	terraform.RequirePlannedValuesMapKeyExists(t, plan, "aws_db_instance.default")
 	ec2Resource := plan.ResourcePlannedValuesMap["aws_db_instance.default"]
-	ec2Tags := ec2Resource.Name["engine"].(string)
+	ec2Tags := ec2Resource.AttributeValues["engine"].(string)
 	assert.Equal(t, expectedName, ec2Tags)
 }
